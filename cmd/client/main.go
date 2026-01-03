@@ -29,9 +29,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not subscribe to pause: %v", err)
 	}
-	fmt.Printf("queue declared and bound %s", queue.Name)
+	fmt.Printf("queue declared and bound %s\n", queue.Name)
 
 	gs := gamelogic.NewGameState(username)
+
+	go func() {
+		if err := pubsub.SubscribeJSON(conn, routing.ExchangePerilDirect, queue.Name, routing.PauseKey, pubsub.SimpleQueueTransient, handlerPause(gs)); err != nil {
+			log.Fatalf("SubscribeJSON error: %v", err)
+		}
+
+		fmt.Println("Successfully subscribed")
+
+	}()
+
 	for {
 		words := gamelogic.GetInput()
 
