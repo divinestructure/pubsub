@@ -2,43 +2,34 @@ package pubsub
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 
+	"github.com/bootdotdev/learn-pub-sub-starter/internal/routing"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func SubscribeJSON[T any](conn *amqp.Connection, exchange, queueName, key string, queueType SimpleQueueType, handler func(T)) error {
-
-	subCh, err := conn.Channel()
-	if err != nil {
-		return err
-	}
+func SubscribeJSON[T any](subCh *amqp.Channel, queueName, username string, handler func(T)) error {
 
 	deliveries, err := subCh.Consume(queueName, "", false, false, false, false, nil)
 	if err != nil {
 		return err
 	}
 
-	errChan := make(chan error)
+	for delivery := range deliveries {
+		var message T
 
-	go func() {
-		for delivery := range deliveries {
-			var message T
-
-			if err := json.Unmarshal(delivery.Body, &message); err != nil {
-				errChan <- err
-				return
-			}
-			handler(message)
-
-			if err := delivery.Ack(false); err != nil {
-				errChan <- err
-				return
-			}
-
+		if err := json.Unmarshal(delivery.Body, &message); err != nil {
+			return err
 		}
-	}()
+		handler(message)
 
-	err = <-errChan
+		if err := delivery.Ack(false); err != nil {
+			return err
+		}
+		fmt.Println(string(delivery.Body))
+		log.Printf("Move published successfully to %v.%v", routing.ArmyMovesPrefix, username)
+	}
 
-	return err
+	return nil
 }

@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -11,7 +10,7 @@ import (
 func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 	jsonVal, err := json.Marshal(val)
 	if err != nil {
-		return fmt.Errorf("marshaling error: %v", err)
+		return err
 	}
 
 	err = ch.PublishWithContext(context.Background(), exchange, key, false, false, amqp.Publishing{
@@ -19,7 +18,7 @@ func PublishJSON[T any](ch *amqp.Channel, exchange, key string, val T) error {
 		Body:        jsonVal,
 	})
 	if err != nil {
-		return fmt.Errorf("publishing errorr: %v", err)
+		return err
 	}
 
 	return nil
